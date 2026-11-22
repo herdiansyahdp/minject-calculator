@@ -1,6 +1,6 @@
 /**
- * UI Controller — wires DOM buttons, keyboard, display, history panel.
- * Imports all logic modules; no business logic here.
+ * UI Controller — wires DOM buttons, keyboard, display, history panel, theme, and preview.
+ * Imports pure logic modules; no business logic here.
  */
 
 import { calculate } from '../calc/index.js';
@@ -8,56 +8,132 @@ import { createHistoryManager } from './history.js';
 import { createThemeManager } from './theme.js';
 import { canAppend } from './inputValidator.js';
 
-// --- DOM refs ---
-const displayExpr   = document.getElementById('display-expr');
-const displayResult = document.getElementById('display-result');
-const historyList   = document.getElementById('history-list');
-const btnClearHist  = document.getElementById('btn-clear-history');
-const btnTheme      = document.getElementById('btn-theme');
+// --- DOM References ---
+const displayExpr        = document.getElementById('display-expr');
+const displayResult      = document.getElementById('display-result');
+const displayPreviewTag  = document.getElementById('display-preview-tag');
+const historyList        = document.getElementById('history-list');
+const historyBadge       = document.getElementById('history-badge');
+const btnClearHist       = document.getElementById('btn-clear-history');
+const themeBtnLight      = document.getElementById('theme-btn-light');
+const themeBtnDark       = document.getElementById('theme-btn-dark');
 
 // --- State ---
 let expr = '';
+let lastAnswer = '';
+let isCommittedResult = false;
 let lastWasError = false;
 
 const historyManager = createHistoryManager(localStorage);
 const themeManager   = createThemeManager();
-themeManager.init();
-updateThemeButton();
 
-// --- Render helpers ---
+// --- Theme Management ---
+themeManager.init();
+syncThemeUI();
+
+function syncThemeUI() {
+  const current = themeManager.getCurrent();
+  const isDark = current === 'dark';
+
+  themeBtnLight.classList.toggle('active', !isDark);
+  themeBtnLight.setAttribute('aria-checked', String(!isDark));
+
+  themeBtnDark.classList.toggle('active', isDark);
+  themeBtnDark.setAttribute('aria-checked', String(isDark));
+}
+
+themeBtnLight.addEventListener('click', () => {
+  themeManager.set('light');
+  syncThemeUI();
+});
+
+themeBtnDark.addEventListener('click', () => {
+  themeManager.set('dark');
+  syncThemeUI();
+});
+
+// --- Display & Live Preview Helpers ---
 function updateDisplay() {
   displayExpr.textContent = expr || '0';
-  displayResult.textContent = '';
+
+  if (!expr) {
+    displayResult.textContent = '';
+    displayResult.classList.remove('error-state');
+    displayPreviewTag.style.display = 'none';
+    return;
+  }
+
+  // Live preview evaluation (silent on incomplete expressions)
+  if (!isCommittedResult) {
+    const { result, error } = calculate(expr);
+    if (!error && result !== null) {
+      displayResult.textContent = '= ' + result;
+      displayResult.classList.remove('error-state');
+      displayPreviewTag.style.display = 'block';
+    } else {
+      displayResult.textContent = '';
+      displayPreviewTag.style.display = 'none';
+    }
+  }
 }
 
-function showResult(text, isError = false) {
-  displayResult.textContent = text;
-  displayResult.setAttribute('aria-live', 'polite');
+function showCommittedResult(text, isError = false) {
+  isCommittedResult = true;
   lastWasError = isError;
+  displayPreviewTag.style.display = 'none';
+
+  if (isError) {
+    displayResult.textContent = text;
+    displayResult.classList.add('error-state');
+  } else {
+    displayResult.textContent = '= ' + text;
+    displayResult.classList.remove('error-state');
+  }
 }
 
+// --- History Rendering ---
 function renderHistory() {
   historyList.innerHTML = '';
-  for (const item of historyManager.getAll()) {
+  const items = historyManager.getAll();
+
+  if (historyBadge) {
+    historyBadge.textContent = items.length;
+  }
+
+  if (items.length === 0) {
+    const emptyLi = document.createElement('li');
+    emptyLi.className = 'history-empty-text';
+    emptyLi.textContent = 'Belum ada riwayat perhitungan';
+    historyList.appendChild(emptyLi);
+    return;
+  }
+
+  for (const item of items) {
     const li = document.createElement('li');
+    li.className = 'history-item';
     li.setAttribute('role', 'button');
     li.setAttribute('tabindex', '0');
     li.setAttribute('aria-label', `${item.expr} = ${item.result}`);
 
-    const exprSpan = document.createElement('span');
-    exprSpan.className = 'hist-expr';
-    exprSpan.textContent = item.expr;
+    const exprDiv = document.createElement('div');
+    exprDiv.className = 'history-item-expr';
+    exprDiv.textContent = item.expr;
 
-    const resSpan = document.createElement('span');
-    resSpan.className = 'hist-result';
-    resSpan.textContent = '= ' + item.result;
+    const resDiv = document.createElement('div');
+    resDiv.className = 'history-item-res';
+    resDiv.textContent = item.result;
 
-    li.appendChild(exprSpan);
-    li.appendChild(resSpan);
+    li.appendChild(exprDiv);
+    li.appendChild(resDiv);
 
     // Click: insert result into input
     li.addEventListener('click', () => useHistoryItem(item.result));
-    li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') useHistoryItem(item.result); });
+    li.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        useHistoryItem(item.result);
+      }
+    });
 
     historyList.appendChild(li);
   }
@@ -65,56 +141,102 @@ function renderHistory() {
 
 function useHistoryItem(result) {
   expr = result;
+  isCommittedResult = false;
+  lastWasError = false;
   updateDisplay();
 }
 
-function updateThemeButton() {
-  const isDark = themeManager.getCurrent() === 'dark';
-  btnTheme.textContent = isDark ? '☀️' : '🌙';
-  btnTheme.setAttribute('aria-label', isDark ? 'Ganti ke mode terang' : 'Ganti ke mode gelap');
-}
-
-// --- Actions ---
+// --- Calculator Actions ---
 function appendChar(char) {
   if (lastWasError) {
-    // after error, clear result display but keep expr editable
-    displayResult.textContent = '';
+    expr = '';
     lastWasError = false;
   }
+  isCommittedResult = false;
+
   if (!canAppend(expr, char)) return;
-  expr += char;
+
+  // Clean spacing around binary operators
+  const isBinaryOp = ['+', '*', '/', '×', '÷', '^'].includes(char);
+  if (isBinaryOp && expr.length > 0) {
+    const symbol = char === '*' ? '×' : (char === '/' ? '÷' : char);
+    expr = expr.trimEnd() + ' ' + symbol + ' ';
+  } else if (char === '-' && expr.length > 0 && !expr.trimEnd().endsWith('(') && !['+','-','*','/','×','÷','^'].includes(expr.trimEnd().slice(-1))) {
+    expr = expr.trimEnd() + ' - ';
+  } else {
+    expr += char;
+  }
+
   updateDisplay();
 }
 
 function doBackspace() {
-  expr = expr.slice(0, -1);
-  lastWasError = false;
+  if (lastWasError) {
+    doClear();
+    return;
+  }
+  isCommittedResult = false;
+
+  // Trim trailing space if operator had spacing
+  if (expr.endsWith(' ')) {
+    expr = expr.trimEnd();
+  }
+  expr = expr.slice(0, -1).trimEnd();
   updateDisplay();
 }
 
 function doClear() {
   expr = '';
+  isCommittedResult = false;
   lastWasError = false;
   updateDisplay();
-  displayResult.textContent = '';
 }
 
 function doCalculate() {
   if (!expr) return;
   const { result, error } = calculate(expr);
   if (error) {
-    showResult('⚠ ' + error, true);
+    showCommittedResult('⚠ ' + error, true);
   } else {
-    showResult('= ' + result);
+    showCommittedResult(result, false);
+    lastAnswer = result;
     historyManager.add({ expr, result });
     renderHistory();
-    // keep expr on screen; user can continue editing or clear
   }
 }
 
-// --- Button wiring ---
-document.querySelectorAll('[data-action]').forEach(btn => {
+function doAns() {
+  // Use last answer if available, or newest item from history
+  const ansToUse = lastAnswer || (historyManager.getAll()[0]?.result ?? '');
+  if (!ansToUse) return;
+
+  if (lastWasError) {
+    expr = '';
+    lastWasError = false;
+  }
+  isCommittedResult = false;
+
+  // If last char is a digit, add multiply first
+  const last = expr.trim().slice(-1);
+  if (last && (last >= '0' && last <= '9')) {
+    expr = expr.trimEnd() + ' × ' + ansToUse;
+  } else {
+    expr += ansToUse;
+  }
+  updateDisplay();
+}
+
+// --- Visual feedback for button click / keypress ---
+function triggerButtonFeedback(btn) {
+  if (!btn) return;
+  btn.classList.add('btn-active');
+  setTimeout(() => btn.classList.remove('btn-active'), 120);
+}
+
+// --- Button Wiring ---
+document.querySelectorAll('.keypad-btn').forEach(btn => {
   btn.addEventListener('click', () => {
+    triggerButtonFeedback(btn);
     const action = btn.dataset.action;
     switch (action) {
       case 'digit':
@@ -126,6 +248,7 @@ document.querySelectorAll('[data-action]').forEach(btn => {
       case 'clear':     doClear();     break;
       case 'backspace': doBackspace(); break;
       case 'equals':    doCalculate(); break;
+      case 'ans':       doAns();       break;
     }
   });
 });
@@ -135,30 +258,60 @@ btnClearHist.addEventListener('click', () => {
   renderHistory();
 });
 
-btnTheme.addEventListener('click', () => {
-  themeManager.toggle();
-  updateThemeButton();
+// --- Sample Expressions Wiring ---
+document.querySelectorAll('[data-sample]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const sample = btn.dataset.sample;
+    expr = sample;
+    isCommittedResult = false;
+    lastWasError = false;
+    updateDisplay();
+  });
 });
 
-// --- Keyboard ---
+// --- Keyboard Handling ---
 const KEY_MAP = {
   '0':'0','1':'1','2':'2','3':'3','4':'4',
   '5':'5','6':'6','7':'7','8':'8','9':'9',
-  '.':'.', '+':'+', '-':'-', '*':'*', '/':'/',
-  '^':'^', '(':' (', ')':')',
+  '.':'.', '+':'+', '-':'-', '*':'×', '/':'÷',
+  'x':'×', 'X':'×', '^':'^', '(':'(', ')':')',
+  'r':'√', 'R':'√',
 };
 
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-  if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); doCalculate(); return; }
-  if (e.key === 'Escape')     { doClear();     return; }
-  if (e.key === 'Backspace')  { doBackspace(); return; }
+  if (e.key === 'Enter' || e.key === '=') {
+    e.preventDefault();
+    const btn = document.querySelector('[data-action="equals"]');
+    triggerButtonFeedback(btn);
+    doCalculate();
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    const btn = document.querySelector('[data-action="clear"]');
+    triggerButtonFeedback(btn);
+    doClear();
+    return;
+  }
+
+  if (e.key === 'Backspace') {
+    const btn = document.querySelector('[data-action="backspace"]');
+    triggerButtonFeedback(btn);
+    doBackspace();
+    return;
+  }
 
   const mapped = KEY_MAP[e.key];
-  if (mapped !== undefined) appendChar(mapped.trim() || e.key);
+  if (mapped !== undefined) {
+    // Find matching button to animate
+    const btn = document.querySelector(`[data-value="${mapped}"]`);
+    triggerButtonFeedback(btn);
+    appendChar(mapped);
+  }
 });
 
-// --- Initial render ---
+// --- Initial Render ---
 updateDisplay();
 renderHistory();

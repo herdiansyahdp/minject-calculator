@@ -3,101 +3,215 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kalkulator Web</title>
-  <style>
-    /* Minimal layout only — full UI/UX styling deferred */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; padding: 1rem; }
-    #app { max-width: 420px; margin: 0 auto; }
-    #display { background: #f5f5f5; padding: .75rem 1rem; border-radius: 8px; margin-bottom: .5rem; min-height: 4rem; text-align: right; }
-    [data-theme=dark] #display { background: #222; color: #fff; }
-    #display-expr   { font-size: 1.1rem; word-break: break-all; min-height: 1.4em; }
-    #display-result { font-size: 1.5rem; font-weight: bold; min-height: 1.8em; }
-    #buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: .4rem; margin-bottom: .75rem; }
-    button { padding: .9rem .5rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 6px;
-             background: #fff; cursor: pointer; min-height: 44px; min-width: 44px; }
-    button:hover { background: #e8e8e8; }
-    [data-theme=dark] button { background: #333; color: #fff; border-color: #555; }
-    [data-theme=dark] button:hover { background: #444; }
-    button[data-action=equals]    { background: #007bff; color: #fff; grid-column: span 2; }
-    button[data-action=clear]     { background: #dc3545; color: #fff; }
-    button[data-action=backspace] { background: #fd7e14; color: #fff; }
-    #theme-row { display: flex; justify-content: flex-end; margin-bottom: .75rem; }
-    #history-section h2 { font-size: .9rem; margin-bottom: .4rem; }
-    #history-list { list-style: none; max-height: 200px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; }
-    #history-list li { padding: .5rem .75rem; cursor: pointer; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; gap: .5rem; }
-    #history-list li:last-child { border-bottom: none; }
-    #history-list li:hover { background: #f0f4ff; }
-    [data-theme=dark] #history-list { border-color: #444; }
-    [data-theme=dark] #history-list li { border-color: #333; color: #eee; }
-    [data-theme=dark] #history-list li:hover { background: #2a2a3a; }
-    .hist-expr   { color: #555; font-size: .85rem; word-break: break-all; }
-    .hist-result { font-weight: bold; white-space: nowrap; }
-    [data-theme=dark] .hist-expr { color: #aaa; }
-    #btn-clear-history { margin-top: .4rem; font-size: .8rem; padding: .3rem .7rem; }
-  </style>
+  <title>Kalkulator /calculator</title>
+  <link rel="stylesheet" href="src/ui/style.css" />
 </head>
 <body>
-<div id="app" role="main">
 
-  <!-- Theme toggle -->
-  <div id="theme-row">
-    <button id="btn-theme" aria-label="Ganti tema">🌙</button>
-  </div>
+  <!-- Top bar title -->
+  <header class="top-title-bar">
+    <span class="top-title-main">Kalkulator</span>
+    <span class="top-title-path">/calculator</span>
+  </header>
 
-  <!-- Display -->
-  <section id="display" aria-label="Layar kalkulator">
-    <div id="display-expr"  aria-label="Ekspresi" aria-live="off">0</div>
-    <div id="display-result" aria-label="Hasil"   aria-live="polite"></div>
-  </section>
+  <!-- Main Card Container -->
+  <main class="app-container" role="main">
 
-  <!-- Button grid -->
-  <div id="buttons" role="group" aria-label="Tombol kalkulator">
-    <!-- Row 1 -->
-    <button data-action="clear"     aria-label="Hapus semua">C</button>
-    <button data-action="backspace" aria-label="Hapus satu karakter">⌫</button>
-    <button data-action="paren"  data-value="(" aria-label="Kurung buka">(</button>
-    <button data-action="paren"  data-value=")" aria-label="Kurung tutup">)</button>
+    <!-- Card Header -->
+    <header class="app-header">
+      <div class="app-brand">
+        <div class="brand-icon" aria-hidden="true">Σ</div>
+        <div class="brand-info">
+          <h1>Kalkulator</h1>
+          <p>Kurung, pangkat, dan akar dalam satu layar</p>
+        </div>
+      </div>
 
-    <!-- Row 2 -->
-    <button data-action="op"    data-value="√" aria-label="Akar kuadrat">√</button>
-    <button data-action="op"    data-value="^" aria-label="Pangkat">x^y</button>
-    <button data-action="op"    data-value="÷" aria-label="Bagi">÷</button>
-    <button data-action="op"    data-value="×" aria-label="Kali">×</button>
+      <div class="app-controls">
+        <div class="keyboard-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M6 12h.001M10 12h.001M14 12h.001M18 12h.001M7 16h10"></path>
+          </svg>
+          <span>Siap menerima ketikan keyboard</span>
+        </div>
 
-    <!-- Row 3 -->
-    <button data-action="digit" data-value="7" aria-label="7">7</button>
-    <button data-action="digit" data-value="8" aria-label="8">8</button>
-    <button data-action="digit" data-value="9" aria-label="9">9</button>
-    <button data-action="op"    data-value="-" aria-label="Kurang">−</button>
+        <!-- Segmented Theme Switcher -->
+        <div class="theme-pill" role="radiogroup" aria-label="Pilihan tema">
+          <button id="theme-btn-light" class="theme-btn active" role="radio" aria-checked="true" aria-label="Mode Terang">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Terang</span>
+          </button>
+          <button id="theme-btn-dark" class="theme-btn" role="radio" aria-checked="false" aria-label="Mode Gelap">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span>Gelap</span>
+          </button>
+        </div>
+      </div>
+    </header>
 
-    <!-- Row 4 -->
-    <button data-action="digit" data-value="4" aria-label="4">4</button>
-    <button data-action="digit" data-value="5" aria-label="5">5</button>
-    <button data-action="digit" data-value="6" aria-label="6">6</button>
-    <button data-action="op"    data-value="+" aria-label="Tambah">+</button>
+    <!-- Two-Column App Body -->
+    <div class="app-body">
 
-    <!-- Row 5 -->
-    <button data-action="digit" data-value="1" aria-label="1">1</button>
-    <button data-action="digit" data-value="2" aria-label="2">2</button>
-    <button data-action="digit" data-value="3" aria-label="3">3</button>
+      <!-- Left Column: Calculator Panel -->
+      <section class="calc-panel" aria-label="Kalkulator">
 
-    <!-- Equals spans 2 rows on the right -->
-    <button data-action="equals" aria-label="Sama dengan" style="grid-row: span 2">=</button>
+        <!-- Display Screen -->
+        <div class="calc-screen" aria-label="Layar kalkulator">
+          <div class="screen-label">EKSPRESI</div>
+          <div id="display-expr" class="screen-expression" aria-label="Ekspresi saat ini" aria-live="off">0</div>
+          <div class="screen-divider"></div>
+          <div class="screen-bottom-row">
+            <div id="display-result" class="screen-result" aria-label="Hasil perhitungan" aria-live="polite"></div>
+            <div id="display-preview-tag" class="preview-tag" style="display: none;">Pratinjau</div>
+          </div>
+        </div>
 
-    <!-- Row 6 -->
-    <button data-action="digit" data-value="0" aria-label="0" style="grid-column: span 2">0</button>
-    <button data-action="dot"   data-value="." aria-label="Titik desimal">.</button>
-  </div>
+        <!-- Keypad Grid -->
+        <div id="keypad" class="keypad-grid" role="group" aria-label="Tombol kalkulator">
+          <!-- Row 1 -->
+          <button class="keypad-btn" data-action="clear" aria-label="Clear / Kosongkan">C</button>
+          <button class="keypad-btn" data-action="backspace" aria-label="Hapus satu karakter">Hapus</button>
+          <button class="keypad-btn" data-action="paren" data-value="(" aria-label="Kurung buka">(</button>
+          <button class="keypad-btn" data-action="paren" data-value=")" aria-label="Kurung tutup">)</button>
 
-  <!-- History -->
-  <section id="history-section" aria-label="Riwayat perhitungan">
-    <h2>Riwayat</h2>
-    <ul id="history-list" aria-label="Daftar riwayat perhitungan"></ul>
-    <button id="btn-clear-history" aria-label="Hapus semua riwayat">Hapus riwayat</button>
-  </section>
+          <!-- Row 2 -->
+          <button class="keypad-btn" data-action="op" data-value="√" aria-label="Akar kuadrat">
+            <span>sqrt</span><sub style="font-size: 11px; margin-left: 2px;">x</sub>
+          </button>
+          <button class="keypad-btn" data-action="op" data-value="^" aria-label="Pangkat">^</button>
+          <button class="keypad-btn" data-action="op" data-value="÷" aria-label="Bagi">÷</button>
+          <button class="keypad-btn" data-action="op" data-value="×" aria-label="Kali">×</button>
 
-</div>
-<script type="module" src="src/ui/app.js"></script>
+          <!-- Row 3 -->
+          <button class="keypad-btn" data-action="digit" data-value="7" aria-label="Angka 7">7</button>
+          <button class="keypad-btn" data-action="digit" data-value="8" aria-label="Angka 8">8</button>
+          <button class="keypad-btn" data-action="digit" data-value="9" aria-label="Angka 9">9</button>
+          <button class="keypad-btn" data-action="op" data-value="-" aria-label="Kurang">−</button>
+
+          <!-- Row 4 -->
+          <button class="keypad-btn" data-action="digit" data-value="4" aria-label="Angka 4">4</button>
+          <button class="keypad-btn" data-action="digit" data-value="5" aria-label="Angka 5">5</button>
+          <button class="keypad-btn" data-action="digit" data-value="6" aria-label="Angka 6">6</button>
+          <button class="keypad-btn" data-action="op" data-value="+" aria-label="Tambah">+</button>
+
+          <!-- Row 5 -->
+          <button class="keypad-btn" data-action="digit" data-value="1" aria-label="Angka 1">1</button>
+          <button class="keypad-btn" data-action="digit" data-value="2" aria-label="Angka 2">2</button>
+          <button class="keypad-btn" data-action="digit" data-value="3" aria-label="Angka 3">3</button>
+          <button class="keypad-btn btn-equals" data-action="equals" aria-label="Sama dengan / Hitung">=</button>
+
+          <!-- Row 6 -->
+          <button class="keypad-btn span-2" data-action="digit" data-value="0" aria-label="Angka 0">0</button>
+          <button class="keypad-btn" data-action="dot" data-value="." aria-label="Titik desimal">.</button>
+          <button class="keypad-btn" data-action="ans" aria-label="Gunakan jawaban sebelumnya">Ans</button>
+        </div>
+
+        <!-- Helper note -->
+        <div class="calc-shortcut-hint" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 10 4 15 9 20"></polyline>
+            <path d="M20 4v7a4 4 0 0 1-4 4H4"></path>
+          </svg>
+          <span>Tekan Enter untuk menghitung, Escape untuk mengosongkan</span>
+        </div>
+      </section>
+
+      <!-- Right Column: Side Cards Stack -->
+      <aside class="side-stack">
+
+        <!-- Card 1: Riwayat -->
+        <section class="side-card" aria-label="Riwayat Perhitungan">
+          <div class="side-card-header">
+            <div class="side-card-title-group">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <h2 class="side-card-title">Riwayat</h2>
+              <span id="history-badge" class="count-pill">0</span>
+            </div>
+            <button id="btn-clear-history" class="btn-clear-history" aria-label="Hapus semua riwayat">Hapus riwayat</button>
+          </div>
+
+          <div class="history-scroll-container">
+            <ul id="history-list" class="history-list" aria-label="Daftar item riwayat"></ul>
+          </div>
+        </section>
+
+        <!-- Card 2: Pintasan Keyboard -->
+        <section class="side-card" aria-label="Pintasan Keyboard">
+          <h2 class="side-card-title" style="margin-bottom: 14px;">Pintasan keyboard</h2>
+          <div class="shortcuts-grid">
+            <div class="shortcut-entry">
+              <kbd class="shortcut-kbd">0-9 , + - * / ^ ( )</kbd>
+              <span class="shortcut-desc">Input</span>
+            </div>
+            <div class="shortcut-entry">
+              <kbd class="shortcut-kbd">Enter atau =</kbd>
+              <span class="shortcut-desc">Hitung</span>
+            </div>
+            <div class="shortcut-entry">
+              <kbd class="shortcut-kbd">Backspace</kbd>
+              <span class="shortcut-desc">Hapus 1 karakter</span>
+            </div>
+            <div class="shortcut-entry">
+              <kbd class="shortcut-kbd">Escape</kbd>
+              <span class="shortcut-desc">Kosongkan layar</span>
+            </div>
+            <div class="shortcut-entry">
+              <kbd class="shortcut-kbd">r</kbd>
+              <span class="shortcut-desc">Akar kuadrat (√)</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Card 3: Coba Ekspresi -->
+        <section class="side-card" aria-label="Coba Ekspresi">
+          <h2 class="side-card-title">Coba ekspresi</h2>
+          <p class="side-card-subtitle">Urutan operasi mengikuti kurung, pangkat, lalu kali/bagi.</p>
+          <div class="samples-row">
+            <button class="sample-card" data-sample="12 + 8 × 3" aria-label="Coba 12 + 8 × 3">
+              <span class="sample-expr">12 + 8 × 3</span>
+              <span class="sample-label">Aturan kali dulu</span>
+            </button>
+            <button class="sample-card" data-sample="2 ^ 3 ^ 2" aria-label="Coba 2 ^ 3 ^ 2">
+              <span class="sample-expr">2 ^ 3 ^ 2</span>
+              <span class="sample-label">Pangkat kanan</span>
+            </button>
+            <button class="sample-card" data-sample="3 × (-2)" aria-label="Coba 3 × (-2)">
+              <span class="sample-expr">3 × (-2)</span>
+              <span class="sample-label">Bilangan negatif</span>
+            </button>
+          </div>
+        </section>
+
+      </aside>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        <path d="m9 12 2 2 4-4"></path>
+      </svg>
+      <span>Perhitungan berjalan di perangkatmu. Riwayat dan tema tidak dikirim ke mana pun.</span>
+    </footer>
+
+  </main>
+
+  <script type="module" src="src/ui/app.js"></script>
 </body>
 </html>

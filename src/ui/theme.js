@@ -22,6 +22,14 @@ export function createThemeManager() {
       document.documentElement.setAttribute('data-theme', current);
     },
 
+    /** Set theme explicitly ('light' | 'dark'). */
+    set(theme) {
+      if (theme !== 'light' && theme !== 'dark') return;
+      current = theme;
+      localStorage.setItem(STORAGE_KEY, current);
+      document.documentElement.setAttribute('data-theme', current);
+    },
+
     /** Flip theme, save, re-apply. */
     toggle() {
       current = current === 'dark' ? 'light' : 'dark';
